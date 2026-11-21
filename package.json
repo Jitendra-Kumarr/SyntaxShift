@@ -1,0 +1,77 @@
+{
+  "name": "syntaxshift",
+  "displayName": "SyntaxShift",
+  "description": "Convert code between programming languages using AI",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "syntaxshift.convert",
+        "title": "SyntaxShift: Convert Code"
+      },
+      {
+        "command": "syntaxshift.setApiKey",
+        "title": "SyntaxShift: Set Gemini API Key"
+      },
+      {
+        "command": "syntaxshift.testProvider",
+        "title": "SyntaxShift: Test AI Provider"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "syntaxshift.convert",
+          "when": "editorTextFocus",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SyntaxShift",
+      "properties": {
+        "syntaxshift.provider": {
+          "type": "string",
+          "enum": ["auto", "copilot", "gemini"],
+          "default": "auto",
+          "description": "auto: try GitHub Copilot first, then your Gemini key. copilot: Copilot only. gemini: Gemini key only."
+        },
+        "syntaxshift.model": {
+          "type": "string",
+          "default": "gemini-flash-lite-latest",
+          "description": "Gemini model used when the Gemini key is used. Change this if Google retires the model."
+        },
+        "syntaxshift.timeoutSeconds": {
+          "type": "number",
+          "default": 30,
+          "description": "Seconds to wait for each request before giving up."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.96.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "eslint": "^10.5.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  }
+}
