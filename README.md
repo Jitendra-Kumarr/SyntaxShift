@@ -1,65 +1,65 @@
-# syntaxshift README
+# SyntaxShift
 
-This is the README for your extension "syntaxshift". After writing up a brief description, we recommend including the following sections.
+Convert code between programming languages inside VS Code.
 
-## Features
+**Languages:** Python, Java, JavaScript, C, C++
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+## The problem it solves
 
-For example if there is an image subfolder under your extension project workspace:
+Moving code from one language to another usually means leaving the editor, writing a prompt in a chat tool, copying the answer, creating a new file and pasting it in. SyntaxShift does this with one command inside VS Code.
 
-\!\[feature X\]\(images/feature-x.png\)
+## How it works
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+1. Open a code file. Select some code, or select nothing to convert the whole file.
+2. Run **SyntaxShift: Convert Code** (Command Palette, or right-click in the editor).
+3. Pick the target language. The source language is detected automatically.
+4. The result opens in an `Untitled` tab beside your code.
+5. Click **Save** in the popup to save it next to the original file.
+   - A whole file keeps its name: `Demo.java` becomes `Demo.py`.
+   - A selection is saved as `code-snippet.py`.
 
-## Requirements
+If a file with that name already exists, SyntaxShift asks before overwriting it.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## Setup
 
-## Extension Settings
+SyntaxShift uses **GitHub Copilot** when it is installed and signed in, so there is nothing to paste. VS Code may ask you once to allow the extension to use Copilot.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+If Copilot is not available, run **SyntaxShift: Set Gemini API Key** and paste a free key from [Google AI Studio](https://aistudio.google.com). The key is stored in VS Code's encrypted secret storage.
 
-For example:
+```
+Convert Code
+   |
+   v
+Try GitHub Copilot --works--> result
+   |
+   '--not available--> Gemini key --> result
+```
 
-This extension contributes the following settings:
+## Settings
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+| Setting | Default | Meaning |
+|---|---|---|
+| `syntaxshift.provider` | `auto` | `auto`: Copilot first, then Gemini. `copilot` or `gemini`: use only that one |
+| `syntaxshift.model` | `gemini-flash-lite-latest` | Gemini model used with your key |
+| `syntaxshift.timeoutSeconds` | `30` | Seconds to wait per request |
 
-## Known Issues
+## Limitations
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Your code is sent to GitHub Copilot or to Google Gemini. Do not use it on private code you are not allowed to share.
+- The result is a first draft written by an AI. Review it before relying on it, because it may not behave exactly like the original.
+- It converts one file or selection at a time, not whole projects.
+- Which Copilot models you can use depends on your Copilot plan.
 
-## Release Notes
+## Project layout
 
-Users appreciate release notes as you update your extension.
+| File | Purpose |
+|---|---|
+| `extension.js` | Commands and the main flow |
+| `languages.js` | The supported languages |
+| `prompt.js` | Builds the prompt and cleans the reply |
+| `providers/` | Copilot, Gemini, and the fallback between them |
+| `actions.js` | The save popup |
 
-### 1.0.0
+## License
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+MIT

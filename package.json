@@ -1,14 +1,18 @@
 {
   "name": "syntaxshift",
   "displayName": "SyntaxShift",
-  "description": "Convert code between programming languages using AI",
+  "description": "Convert code between Python, Java, JavaScript, C and C++ with GitHub Copilot or Gemini.",
   "version": "0.0.1",
+  "publisher": "jitendra-kumarr",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jitendra-Kumarr/SyntaxShift.git"
+  },
+  "keywords": ["code converter", "translate code", "copilot", "gemini", "java to python"],
   "engines": {
     "vscode": "^1.96.0"
   },
-  "categories": [
-    "Other"
-  ],
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
@@ -20,10 +24,6 @@
       {
         "command": "syntaxshift.setApiKey",
         "title": "SyntaxShift: Set Gemini API Key"
-      },
-      {
-        "command": "syntaxshift.testProvider",
-        "title": "SyntaxShift: Test AI Provider"
       }
     ],
     "menus": {
@@ -47,7 +47,7 @@
         "syntaxshift.model": {
           "type": "string",
           "default": "gemini-flash-lite-latest",
-          "description": "Gemini model used when the Gemini key is used. Change this if Google retires the model."
+          "description": "Gemini model used when the Gemini key is used."
         },
         "syntaxshift.timeoutSeconds": {
           "type": "number",

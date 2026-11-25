@@ -3,17 +3,18 @@ const path = require('path');
 const { LANGUAGES, findByVsCodeId } = require('./languages');
 const { buildPrompt, cleanResponse } = require('./prompt');
 const { convertWithProviders } = require('./providers');
+const { askToSave } = require('./actions');
 
 const KEY_NAME = 'syntaxshiftGeminiKey';
 
-// Turns the language list into rows for a quick-pick menu.
 function toItems(langs) {
     return langs.map(lang => ({ label: lang.name, lang }));
 }
 
 function activate(context) {
     const log = vscode.window.createOutputChannel('SyntaxShift');
-    // Builds the settings object that convertWithProviders needs.
+
+    // The settings the provider chain needs.
     function readContext() {
         const config = vscode.workspace.getConfiguration('syntaxshift');
         return {
@@ -25,7 +26,7 @@ function activate(context) {
         };
     }
 
-    // Command 1: save the user's Gemini key in VS Code's encrypted storage.
+    // Command 1: save the user's Gemini key (only needed if Copilot is not available).
     const setKey = vscode.commands.registerCommand('syntaxshift.setApiKey', async () => {
         const key = await vscode.window.showInputBox({
             prompt: 'Enter your Gemini API key',
@@ -38,22 +39,7 @@ function activate(context) {
         }
     });
 
-    // Command 2: test the provider chain.
-    const testProvider = vscode.commands.registerCommand('syntaxshift.testProvider', async () => {
-        const ctx = readContext();
-        log.show(true);
-        log.appendLine(`--- Provider test (setting: ${ctx.provider}) ---`);
-        try {
-            const result = await convertWithProviders('Reply with the single word: ready', ctx);
-            log.appendLine(`Answered by ${result.provider}: ${result.text.trim()}`);
-            vscode.window.showInformationMessage(`SyntaxShift: ${result.provider} replied "${result.text.trim()}".`);
-        } catch (err) {
-            log.appendLine('FAILED: ' + err.message);
-            vscode.window.showErrorMessage('SyntaxShift: ' + err.message);
-        }
-    });
-
-    // Command 3: convert the selection, or the whole file.
+    // Command 2: convert the selection, or the whole file.
     const convert = vscode.commands.registerCommand('syntaxshift.convert', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -61,27 +47,26 @@ function activate(context) {
             return;
         }
 
-        // 1. The code: the selection, or the whole file if nothing is selected.
+        // 1. The code: the selection, or the whole file.
         const doc = editor.document;
         const wholeFile = editor.selection.isEmpty;
         const code = wholeFile ? doc.getText() : doc.getText(editor.selection);
-
         if (code.trim() === '') {
             vscode.window.showErrorMessage('SyntaxShift: there is no code to convert.');
             return;
         }
 
-        // 2. The source language: detected from VS Code, or asked if unknown.
+        // 2. Source language: detected from VS Code, or asked if unknown.
         let from = findByVsCodeId(doc.languageId);
         if (!from) {
             const picked = await vscode.window.showQuickPick(toItems(LANGUAGES), {
-                placeHolder: 'Could not detect the language. Which language is this code?'
+                placeHolder: 'Which language is this code?'
             });
             if (!picked) { return; }
             from = picked.lang;
         }
 
-        // 3. The target language: everything except the source.
+        // 3. Target language.
         const pickedTarget = await vscode.window.showQuickPick(
             toItems(LANGUAGES.filter(l => l.id !== from.id)),
             { placeHolder: `Convert ${from.name} to which language?` }
@@ -89,21 +74,13 @@ function activate(context) {
         if (!pickedTarget) { return; }
         const target = pickedTarget.lang;
 
-        // 4. For Java output, the class name should match the file name.
-        // (Untitled documents have no file name, so we skip it for those.)
-        let className;
-        if (doc.uri.scheme === 'file') {
-            className = path.parse(doc.uri.fsPath).name;
-        }
+        // For Java output, the class name should match the file name.
+        const className = doc.uri.scheme === 'file' ? path.parse(doc.uri.fsPath).name : undefined;
 
         log.show(true);
         log.appendLine(`--- ${from.name} to ${target.name} ---`);
-        log.appendLine(wholeFile
-            ? `Input: whole file (${code.length} characters)`
-            : `Input: selection (${code.length} characters)`);
 
-        // 5. Convert under a progress notification.
-        // The callback returns { text, provider }, or undefined if it failed.
+        // 4. Convert (Copilot first, then the Gemini key).
         const outcome = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -116,13 +93,12 @@ function activate(context) {
                         className
                     });
                     const result = await convertWithProviders(prompt, readContext());
-
-                    const cleaned = cleanResponse(result.text);
-                    if (cleaned === '') {
+                    const text = cleanResponse(result.text);
+                    if (text === '') {
                         throw new Error('The model returned an empty response. Try again.');
                     }
                     log.appendLine(`Conversion done (${result.provider}).`);
-                    return { text: cleaned, provider: result.provider };
+                    return { text, provider: result.provider };
                 } catch (err) {
                     log.appendLine('FAILED: ' + err.message);
                     if (err.code === 'NO_KEY') {
@@ -140,19 +116,20 @@ function activate(context) {
                 }
             }
         );
-
         if (outcome === undefined) { return; }
 
-        // 6. Show the result beside the original.
-        const resultDoc = await vscode.workspace.openTextDocument({
+        // 5. Show the result in an unsaved "Untitled" tab beside the original.
+        const preview = await vscode.workspace.openTextDocument({
             content: outcome.text,
             language: target.id
         });
-        await vscode.window.showTextDocument(resultDoc, vscode.ViewColumn.Beside);
-        vscode.window.setStatusBarMessage(`SyntaxShift: converted with ${outcome.provider}`, 5000);
+        await vscode.window.showTextDocument(preview, vscode.ViewColumn.Beside);
+
+        // 6. Ask whether to save it (a selection is saved as code-snippet.<ext>).
+        await askToSave(editor, target, wholeFile, outcome.text, preview);
     });
 
-    context.subscriptions.push(setKey, testProvider, convert, log);
+    context.subscriptions.push(setKey, convert, log);
 }
 
 function deactivate() {}
